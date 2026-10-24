@@ -1,8 +1,8 @@
-name: Build Gunstorm Android ARM64 APK
+name: Build Gunstorm Android ARM64
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [principal, main, master]
 
 jobs:
   export:
@@ -10,17 +10,44 @@ jobs:
     container:
       image: barichello/godot-ci:4.4.1
     steps:
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Prepare output directory
-        run: mkdir -p build
-      - name: Import project resources
-        run: godot --headless --editor --path . --quit
+
+      - name: Extract project ZIP if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f project.godot ]; then
+            ZIP_FILE="$(find . -maxdepth 1 -type f -iname 'Gunstorm_Reconstruccion_ARM64_lista_para_compilar.zip' -print -quit)"
+            if [ -z "$ZIP_FILE" ]; then
+              ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' ! -iname '*workflow*' -print -quit)"
+            fi
+            if [ -z "$ZIP_FILE" ]; then
+              echo 'ERROR: No encuentro project.godot ni un ZIP del proyecto en la raíz.'
+              exit 1
+            fi
+            mkdir -p extracted
+            unzip -oq "$ZIP_FILE" -d extracted
+          fi
+          PROJECT_FILE="$(find . -path './.git' -prune -o -name project.godot -type f -print -quit)"
+          if [ -z "$PROJECT_FILE" ]; then
+            echo 'ERROR: El ZIP no contiene project.godot.'
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
+          echo "Proyecto encontrado en: $(dirname "$PROJECT_FILE")"
+
+      - name: Import Godot resources
+        run: godot --headless --editor --path "$PROJECT_DIR" --quit
+
       - name: Export Android ARM64 debug APK
-        run: godot --headless --path . --export-debug "Android" build/Gunstorm-Rebuilt-debug.apk
-      - name: Upload APK artifact
+        run: |
+          mkdir -p "$PROJECT_DIR/build"
+          godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$PROJECT_DIR/build/Gunstorm-Rebuilt-debug.apk"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Gunstorm-Rebuilt-Android-ARM64
-          path: build/Gunstorm-Rebuilt-debug.apk
+          path: ${{ env.PROJECT_DIR }}/build/Gunstorm-Rebuilt-debug.apk
           if-no-files-found: error
