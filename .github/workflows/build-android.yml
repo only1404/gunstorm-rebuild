@@ -1,1 +1,35 @@
+name: Build Gunstorm Android ARM64
 
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - principal
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract project ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -type f -name '*.zip' ! -name '*workflow*' -print -quit)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No se encontró el ZIP del proyecto"
+            exit 1
+          fi
+          mkdir -p extracted
+          unzip -oq "$ZIP_FILE" -d extracted
+          PROJECT_FILE=$(find extracted -name project.godot -type f -print -quit)
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "El ZIP no contiene project.godot"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
+
+      - name: Build Android APK
+        run: |
+          echo "Proyecto encontrado: $PROJECT_DIR"
+          echo "Falta configurar el entorno de Godot y la exportación Android."
