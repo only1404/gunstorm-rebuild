@@ -1,0 +1,26 @@
+name: Build Gunstorm Android ARM64 APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4.1
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Prepare output directory
+        run: mkdir -p build
+      - name: Import project resources
+        run: godot --headless --editor --path . --quit
+      - name: Export Android ARM64 debug APK
+        run: godot --headless --path . --export-debug "Android" build/Gunstorm-Rebuilt-debug.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gunstorm-Rebuilt-Android-ARM64
+          path: build/Gunstorm-Rebuilt-debug.apk
+          if-no-files-found: error
