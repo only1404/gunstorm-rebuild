@@ -24,6 +24,8 @@ jobs:
           mkdir -p extracted
           unzip -q "$ZIP" -d extracted
           test -d extracted/gunstorm-arm64 || { echo 'El ZIP no contiene la carpeta esperada gunstorm-arm64/'; find extracted -maxdepth 2 -type d; exit 1; }
+          # ZIPs descargados desde móvil pueden perder el bit ejecutable de los scripts.
+          chmod +x extracted/gunstorm-arm64/scripts/*.sh
 
       - uses: actions/setup-java@v4
         with:
@@ -38,6 +40,7 @@ jobs:
 
       - name: Instalar NDK r17c y utilidades
         run: |
+          set -euo pipefail
           curl -fL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r17c-linux-x86_64.zip
           unzip -q /tmp/ndk.zip -d "$HOME"
           echo "ANDROID_NDK_HOME=$HOME/android-ndk-r17c" >> "$GITHUB_ENV"
@@ -47,6 +50,7 @@ jobs:
       - name: Descargar Cocos2d-x y dependencias
         working-directory: extracted/gunstorm-arm64
         run: |
+          set -euo pipefail
           mkdir -p build-logs
           bash scripts/fetch_deps.sh 2>&1 | tee build-logs/01-fetch.log
 
@@ -60,11 +64,14 @@ jobs:
 
       - name: Compilar librerías de terceros ARM64
         working-directory: extracted/gunstorm-arm64
-        run: bash scripts/build_thirdparty.sh 2>&1 | tee build-logs/02-thirdparty.log
+        run: set -euo pipefail; bash scripts/build_thirdparty.sh 2>&1 | tee build-logs/02-thirdparty.log
 
       - name: Compilar libgame.so ARM64
         working-directory: extracted/gunstorm-arm64
-        run: bash scripts/build_native.sh 2>&1 | tee build-logs/03-native.log
+        run: |
+          set -euo pipefail
+          bash scripts/build_native.sh 2>&1 | tee build-logs/03-native.log
+          find . -type f -name 'libgame.so' -print -quit | grep -q . || { echo 'ERROR: no se generó libgame.so; se cancela el APK vacío'; exit 1; }
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -72,7 +79,12 @@ jobs:
 
       - name: Generar APK debug
         working-directory: extracted/gunstorm-arm64
-        run: gradle --no-daemon :app:assembleDebug 2>&1 | tee build-logs/04-gradle.log
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:assembleDebug 2>&1 | tee build-logs/04-gradle.log
+          APK='app/build/outputs/apk/debug/app-debug.apk'
+          test -f "$APK" || { echo 'ERROR: Gradle no generó el APK'; exit 1; }
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libgame.so' || { echo 'ERROR: APK sin lib/arm64-v8a/libgame.so'; exit 1; }
 
       - name: Verificar APK
         working-directory: extracted/gunstorm-arm64
