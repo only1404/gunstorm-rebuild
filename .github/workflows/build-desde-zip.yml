@@ -66,12 +66,12 @@ jobs:
           grep -n 'Math.ceil' "$FILE"
           # Esta versión antigua de Cocos referencia un módulo libxml2 que no existe
           # en el árbol de Android incluido. La dependencia opcional bloquea ndk-build.
-          MAKEFILE='third_party/cocos2d-x/cocos2dx/Android.mk'
-          test -f "$MAKEFILE" || { echo "No se encontró $MAKEFILE"; exit 1; }
-          if grep -q 'cocos_libxml2_static' "$MAKEFILE"; then
+          # El nombre puede estar referenciado desde el Android.mk del juego o del motor.
+          # Comentar únicamente las líneas que requieren el módulo legacy ausente.
+          while IFS= read -r MAKEFILE; do
             sed -i '/cocos_libxml2_static/s/^/# ARM64 build: optional legacy libxml2 module unavailable: /' "$MAKEFILE"
-          fi
-          if grep -q 'cocos_libxml2_static' "$MAKEFILE"; then
+          done < <(grep -RIl --include='Android.mk' 'cocos_libxml2_static' . || true)
+          if grep -RIn --include='Android.mk' 'cocos_libxml2_static' .; then
             echo 'ERROR: sigue activa la referencia a cocos_libxml2_static'
             exit 1
           fi
