@@ -15,6 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/checkout@v4
+
       - name: Extraer proyecto del ZIP
         run: |
           ZIP=''
@@ -65,7 +67,6 @@ jobs:
           FILE='third_party/cocos2d-x/cocos2dx/platform/android/java/src/org/cocos2dx/lib/Cocos2dxBitmap.java'
           test -f "$FILE" || { echo "No se encontró $FILE"; exit 1; }
           sed -i 's/FloatMath\.ceil/Math.ceil/g' "$FILE"
-          grep -n 'Math.ceil' "$FILE"
           while IFS= read -r MAKEFILE; do
             sed -i '/cocos_libxml2_static/s/^/# ARM64 build: optional legacy libxml2 module unavailable: /' "$MAKEFILE"
           done < <(grep -RIl --include='Android.mk' 'cocos_libxml2_static' . || true)
@@ -73,15 +74,17 @@ jobs:
             echo 'ERROR: sigue activa la referencia a cocos_libxml2_static'
             exit 1
           fi
-          # Cocos2d-x 2.1.5 usa strcmp en CCString.h sin incluir string.h.
-          # Añadir la cabecera de forma idempotente antes de compilar para ARM64.
           CCSTRING='third_party/cocos2d-x/cocos2dx/cocoa/CCString.h'
           test -f "$CCSTRING" || { echo "No se encontró $CCSTRING"; exit 1; }
-          if ! grep -qE '^[[:space:]]*#include[[:space:]]*[<"]string\.h[>"]' "$CCSTRING"; then
+          # El archivo ya contiene string.h dentro de un bloque condicional; ponerlo
+          # literalmente al inicio garantiza que strcmp se declare para todos los ABI.
+          FIRST_LINE="$(head -n 1 "$CCSTRING")"
+          if [ "$FIRST_LINE" != '#include <string.h>' ]; then
             sed -i '1i#include <string.h>' "$CCSTRING"
           fi
-          grep -n 'string.h' "$CCSTRING"
-          echo 'Compatibilidad Android aplicada: FloatMath, libxml2 legacy y string.h'
+          head -n 3 "$CCSTRING"
+          grep -n 'strcmp' "$CCSTRING" | head
+          echo 'Compatibilidad Android aplicada: FloatMath, libxml2 legacy y string.h global'
 
       - name: Compilar librerías de terceros ARM64
         working-directory: extracted/gunstorm-arm64
