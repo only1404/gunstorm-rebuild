@@ -26,6 +26,10 @@ jobs:
           test -d extracted/gunstorm-arm64 || { echo 'El ZIP no contiene la carpeta esperada gunstorm-arm64/'; find extracted -maxdepth 2 -type d; exit 1; }
           # ZIPs descargados desde móvil pueden perder el bit ejecutable de los scripts.
           chmod +x extracted/gunstorm-arm64/scripts/*.sh
+          # Corregir typo del nombre del evento de Cocos2d-x en el código Java/C++ portado.
+          grep -RIl --exclude-dir=.git 'EVNET_COME_TO_FOREGROUND' extracted/gunstorm-arm64 | while IFS= read -r SRC; do
+            sed -i 's/EVNET_COME_TO_FOREGROUND/EVENT_COME_TO_FOREGROUND/g' "$SRC"
+          done
 
       - uses: actions/setup-java@v4
         with:
