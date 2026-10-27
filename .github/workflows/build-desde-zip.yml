@@ -36,7 +36,7 @@ jobs:
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-34" "build-tools;34.0.0" "cmake;3.10.2.4988404"
+            "platforms;android-34" "build-tools;34.0.0" "cmake;3.22.1"
 
       - name: Instalar NDK r17c y utilidades
         run: |
@@ -44,6 +44,8 @@ jobs:
           curl -fL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r17c-linux-x86_64.zip
           unzip -q /tmp/ndk.zip -d "$HOME"
           echo "ANDROID_NDK_HOME=$HOME/android-ndk-r17c" >> "$GITHUB_ENV"
+          echo "CMAKE_BIN=$ANDROID_HOME/cmake/3.22.1/bin/cmake" >> "$GITHUB_ENV"
+          echo "NINJA_BIN=$ANDROID_HOME/cmake/3.22.1/bin/ninja" >> "$GITHUB_ENV"
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends file patch
 
