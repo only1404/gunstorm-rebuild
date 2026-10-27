@@ -71,7 +71,7 @@ jobs:
           while IFS= read -r MAKEFILE; do
             sed -i '/cocos_libxml2_static/s/^/# ARM64 build: optional legacy libxml2 module unavailable: /' "$MAKEFILE"
           done < <(grep -RIl --include='Android.mk' 'cocos_libxml2_static' . || true)
-          if grep -RIn --include='Android.mk' 'cocos_libxml2_static' .; then
+          if grep -RInE --include='Android.mk' '^[[:space:]]*[^#].*cocos_libxml2_static' .; then
             echo 'ERROR: sigue activa la referencia a cocos_libxml2_static'
             exit 1
           fi
