@@ -47,7 +47,7 @@ jobs:
           echo "CMAKE_BIN=$ANDROID_HOME/cmake/3.22.1/bin/cmake" >> "$GITHUB_ENV"
           echo "NINJA_BIN=$ANDROID_HOME/cmake/3.22.1/bin/ninja" >> "$GITHUB_ENV"
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends file patch
+          sudo apt-get install -y --no-install-recommends file patch libtinfo5
 
       - name: Descargar Cocos2d-x y dependencias
         working-directory: extracted/gunstorm-arm64
