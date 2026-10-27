@@ -15,8 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-
       - name: Extraer proyecto del ZIP
         run: |
           ZIP=''
