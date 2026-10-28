@@ -84,15 +84,21 @@ jobs:
           grep -n 'strcmp' "$CCSTRING" | head
           # Cocos2d-x 2.1.5 incluye decode.h sin prefijo, pero algunas distribuciones
           # de libwebp colocan el encabezado dentro de src/webp/. Resolverlo por ruta real.
-          WEBP_HEADER="$(find third_party -type f -path '*webp*' -name 'decode.h' -print -quit)"
+          # Preferir el header público que corresponde a la implementación de WebP
+          # compilada por build_thirdparty.sh; no usar headers de Tizen prebuilt,
+          # que declaran símbolos internos incompatibles con la lib enlazada.
+          WEBP_HEADER='third_party/emscripten/libwebp/webp/decode.h'
+          if [ ! -f "$WEBP_HEADER" ]; then
+            WEBP_HEADER="$(find third_party -type f -path '*webp*' -name 'decode.h' ! -path '*tizen*' ! -path '*prebuilt*' -print -quit)"
+          fi
           WEBP_SOURCE='third_party/cocos2d-x/cocos2dx/platform/CCImageCommonWebp.cpp'
-          if [ -n "$WEBP_HEADER" ] && [ -f "$WEBP_SOURCE" ]; then
+          if [ -n "$WEBP_HEADER" ] && [ -f "$WEBP_HEADER" ] && [ -f "$WEBP_SOURCE" ]; then
             WEBP_REL="$(realpath --relative-to="$(dirname "$WEBP_SOURCE")" "$WEBP_HEADER")"
             sed -i 's|#include "decode.h"|#include "'"$WEBP_REL"'"|' "$WEBP_SOURCE"
             echo "WebP decode.h resuelto: $WEBP_REL"
             grep -n 'decode.h' "$WEBP_SOURCE" | head
           else
-            echo "No se encontró decode.h de WebP o $WEBP_SOURCE; mostrando posibles encabezados"
+            echo "No se encontró un header de WebP compatible o $WEBP_SOURCE; mostrando posibles encabezados"
             find third_party -type f -name 'decode.h' -print | head -20
             exit 1
           fi
