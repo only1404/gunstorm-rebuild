@@ -82,7 +82,21 @@ jobs:
           fi
           head -n 3 "$CCSTRING"
           grep -n 'strcmp' "$CCSTRING" | head
-          echo 'Compatibilidad Android aplicada: FloatMath, libxml2 legacy y string.h global'
+          # Cocos2d-x 2.1.5 incluye decode.h sin prefijo, pero algunas distribuciones
+          # de libwebp colocan el encabezado dentro de src/webp/. Resolverlo por ruta real.
+          WEBP_HEADER="$(find third_party -type f -path '*webp*' -name 'decode.h' -print -quit)"
+          WEBP_SOURCE='third_party/cocos2d-x/cocos2dx/platform/CCImageCommonWebp.cpp'
+          if [ -n "$WEBP_HEADER" ] && [ -f "$WEBP_SOURCE" ]; then
+            WEBP_REL="$(realpath --relative-to="$(dirname "$WEBP_SOURCE")" "$WEBP_HEADER")"
+            sed -i 's|#include "decode.h"|#include "'"$WEBP_REL"'"|' "$WEBP_SOURCE"
+            echo "WebP decode.h resuelto: $WEBP_REL"
+            grep -n 'decode.h' "$WEBP_SOURCE" | head
+          else
+            echo "No se encontró decode.h de WebP o $WEBP_SOURCE; mostrando posibles encabezados"
+            find third_party -type f -name 'decode.h' -print | head -20
+            exit 1
+          fi
+          echo 'Compatibilidad Android aplicada: FloatMath, libxml2 legacy, string.h global y WebP decode.h'
 
       - name: Compilar librerías de terceros ARM64
         working-directory: extracted/gunstorm-arm64
