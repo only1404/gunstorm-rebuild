@@ -102,6 +102,36 @@ jobs:
             find third_party -type f -name 'decode.h' -print | head -20
             exit 1
           fi
+          # El paquete ARM64 no está compilando la implementación real de libwebp
+          # (el módulo termina como empty.c). Mantener la función de Cocos pero
+          # devolver false para datos WebP evita símbolos rotos; PNG/PVR siguen activos.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('third_party/cocos2d-x/cocos2dx/platform/CCImageCommonWebp.cpp')
+          s = p.read_text()
+          signature = 'CCImage::_initWithWebpData'
+          pos = s.find(signature)
+          if pos < 0:
+              raise SystemExit('No se encontró CCImage::_initWithWebpData para aplicar fallback WebP')
+          start = s.find('{', pos)
+          if start < 0:
+              raise SystemExit('No se encontró el cuerpo de _initWithWebpData')
+          depth = 0
+          end = -1
+          for i in range(start, len(s)):
+              if s[i] == '{':
+                  depth += 1
+              elif s[i] == '}':
+                  depth -= 1
+                  if depth == 0:
+                      end = i + 1
+                      break
+          if end < 0:
+              raise SystemExit('Cuerpo de _initWithWebpData incompleto')
+          s = s[:start] + '{ (void)pData; (void)nDataLen; return false; }' + s[end:]
+          p.write_text(s)
+          print('Fallback WebP aplicado: decodificación WebP desactivada; PNG/PVR sin cambios')
+          PY
           # OpenSL ES antiguo usa free() sin incluir stdlib.h con el NDK moderno.
           OPENSL='third_party/cocos2d-x/CocosDenshion/android/opensl/OpenSLEngine.cpp'
           test -f "$OPENSL" || { echo "No se encontró $OPENSL"; exit 1; }
