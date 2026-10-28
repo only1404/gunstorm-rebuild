@@ -96,7 +96,14 @@ jobs:
             find third_party -type f -name 'decode.h' -print | head -20
             exit 1
           fi
-          echo 'Compatibilidad Android aplicada: FloatMath, libxml2 legacy, string.h global y WebP decode.h'
+          # OpenSL ES antiguo usa free() sin incluir stdlib.h con el NDK moderno.
+          OPENSL='third_party/cocos2d-x/CocosDenshion/android/opensl/OpenSLEngine.cpp'
+          test -f "$OPENSL" || { echo "No se encontró $OPENSL"; exit 1; }
+          if ! grep -Eq '^[[:space:]]*#include[[:space:]]*[<"]stdlib\\.h[>"]' "$OPENSL"; then
+            sed -i '1i#include <stdlib.h>' "$OPENSL"
+          fi
+          grep -n 'stdlib.h' "$OPENSL" | head
+          echo 'Compatibilidad Android aplicada: FloatMath, libxml2 legacy, string.h global, WebP decode.h y stdlib.h para OpenSL'
 
       - name: Compilar librerías de terceros ARM64
         working-directory: extracted/gunstorm-arm64
