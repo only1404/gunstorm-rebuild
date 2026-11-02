@@ -176,7 +176,32 @@ jobs:
           path: extracted/gunstorm-arm64/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Probar instalación y arranque en emulador ARM64
+      - name: Subir logs aunque falle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: extracted/gunstorm-arm64/build-logs/
+          if-no-files-found: warn
+
+
+  test-arm64:
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    steps:
+      - name: Descargar APK compilado
+        uses: actions/download-artifact@v4
+        with:
+          name: GunStorm-arm64-debug-apk
+          path: apk
+
+      - name: Instalar SDK y emulador Android ARM64
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "emulator" "platforms;android-30" "system-images;android-30;default;arm64-v8a"
+
+      - name: Instalar y arrancar GunStorm en emulador ARM64
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -184,25 +209,25 @@ jobs:
           arch: arm64-v8a
           profile: pixel_2
           disable-animations: true
+          emulator-boot-timeout: 600
           script: |
             set -eux
-            APK="extracted/gunstorm-arm64/app/build/outputs/apk/debug/app-debug.apk"
-            adb install -r "$APK"
+            adb install -r apk/app-debug.apk
             adb shell am force-stop com.dobsoftstudios.gunstorm || true
             adb shell monkey -p com.dobsoftstudios.gunstorm 1
             sleep 25
-            adb logcat -d -v brief > extracted/gunstorm-arm64/build-logs/emulator-logcat.txt
-            if grep -E "FATAL EXCEPTION|Fatal signal|SIGSEGV|UnsatisfiedLinkError" extracted/gunstorm-arm64/build-logs/emulator-logcat.txt; then
+            adb logcat -d -v brief > emulator-logcat.txt
+            if grep -E "FATAL EXCEPTION|Fatal signal|SIGSEGV|UnsatisfiedLinkError" emulator-logcat.txt; then
               echo "ERROR: el APK presenta un fallo durante el arranque"
               exit 1
             fi
-            adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" || true
+            adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity"
             echo "Instalación y ventana de arranque comprobadas; revisar logcat para validar la escena."
 
-      - name: Subir logs aunque falle
+      - name: Guardar logcat de emulador
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
-          path: extracted/gunstorm-arm64/build-logs/
+          name: GunStorm-emulator-logcat
+          path: emulator-logcat.txt
           if-no-files-found: warn
