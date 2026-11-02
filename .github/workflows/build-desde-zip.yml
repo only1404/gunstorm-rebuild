@@ -198,11 +198,6 @@ jobs:
             fi
             adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" || true
             echo "Instalación y ventana de arranque comprobadas; revisar logcat para validar la escena."
-        uses: actions/upload-artifact@v4
-        with:
-          name: GunStorm-arm64-debug-apk
-          path: extracted/gunstorm-arm64/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
 
       - name: Subir logs aunque falle
         if: always()
