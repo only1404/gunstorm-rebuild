@@ -196,10 +196,14 @@ jobs:
           name: GunStorm-arm64-debug-apk
           path: apk
 
-      - name: Instalar SDK y emulador Android ARM64
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar emulador Android ARM64
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "emulator" "platforms;android-30" "system-images;android-30;default;arm64-v8a"
+          set -euxo pipefail
+          sdkmanager --licenses
+          sdkmanager "platform-tools" "emulator" "platforms;android-30" "system-images;android-30;default;arm64-v8a"
 
       - name: Instalar y arrancar GunStorm en emulador ARM64
         uses: reactivecircus/android-emulator-runner@v2
