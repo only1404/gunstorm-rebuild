@@ -196,6 +196,11 @@ jobs:
           name: GunStorm-arm64-debug-apk
           path: apk
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
         with:
